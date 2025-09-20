@@ -33,7 +33,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV /home/gawd/fraud-telegram-classifier/venv
+set -gx VIRTUAL_ENV /home/gawd/CyberX-Goa-Police-Cyber-Cell/venv
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/"bin $PATH

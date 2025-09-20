@@ -3,7 +3,7 @@
 discover_and_check.py
 
 Find channels by keywords, join them, sample messages, classify with a model API,
-and store only suspicious channel records in SQLite.
+and store only suspicious channel records in SQLite. Leaves channels after classification.
 
 Config via .env:
  - TG_API_ID
@@ -14,6 +14,7 @@ Config via .env:
  - MSG_LIMIT_PER_CHANNEL (default 200)
  - CHANNEL_THRESHOLD (default 0.6)
  - JOIN_IF_NEEDED (true/false)
+ - LEAVE_AFTER_CLASSIFICATION (true/false, default true)
 """
 
 import os
@@ -27,7 +28,7 @@ from dotenv import load_dotenv
 import requests
 from telethon import TelegramClient, errors
 from telethon.tl.functions.contacts import SearchRequest
-from telethon.tl.functions.channels import JoinChannelRequest
+from telethon.tl.functions.channels import JoinChannelRequest, LeaveChannelRequest
 from telethon.tl.types import Channel, Chat, User
 
 load_dotenv()
@@ -39,6 +40,7 @@ CLASSIFIER_API = os.getenv("CLASSIFIER_API", "http://127.0.0.1:8000/predict")
 SAMPLE_SIZE = int(os.getenv("SAMPLE_SIZE", "200"))
 CHANNEL_THRESHOLD = float(os.getenv("CHANNEL_THRESHOLD", "0.6"))
 JOIN_IF_NEEDED = os.getenv("JOIN_IF_NEEDED", "true").lower() in ("1","true","yes")
+LEAVE_AFTER_CLASSIFICATION = os.getenv("LEAVE_AFTER_CLASSIFICATION", "true").lower() in ("1","true","yes")
 MSG_LIMIT_PER_CHANNEL = int(os.getenv("MSG_LIMIT_PER_CHANNEL", SAMPLE_SIZE))
 
 DB_PATH = os.getenv("CHANNEL_DB", "suspicious_channels.db")
@@ -110,6 +112,20 @@ async def join_channel(client, username):
         print("join_channel failed:", e)
         return False
 
+async def leave_channel(client, entity):
+    """
+    Leave a channel after classification
+    """
+    try:
+        await client(LeaveChannelRequest(entity))
+        username = getattr(entity, 'username', 'unknown')
+        print(f"Left channel: {username}")
+        time.sleep(RATE_LIMIT_SECONDS)
+        return True
+    except Exception as e:
+        print("leave_channel failed:", e)
+        return False
+
 # ---------- classification ----------
 def classify_text_batch(texts):
     """
@@ -148,27 +164,42 @@ async def evaluate_channel(client, conn, username, title=None):
         print("Failed to resolve", username, e)
         return None
 
+    # Track if we joined the channel
+    joined_by_us = False
+    
     # Optionally join
     if JOIN_IF_NEEDED:
         try:
-            await join_channel(client, username)
+            result = await join_channel(client, username)
+            if result:
+                joined_by_us = True
         except Exception:
             pass
 
     # Sample latest messages (skip empty / service messages)
     texts = []
-    async for msg in client.iter_messages(entity, limit=MSG_LIMIT_PER_CHANNEL):
-        if not msg:
-            continue
-        text = msg.message
-        if not text or not isinstance(text, str):
-            continue
-        texts.append(text)
-        if len(texts) >= SAMPLE_SIZE:
-            break
+    try:
+        async for msg in client.iter_messages(entity, limit=MSG_LIMIT_PER_CHANNEL):
+            if not msg:
+                continue
+            text = msg.message
+            if not text or not isinstance(text, str):
+                continue
+            texts.append(text)
+            if len(texts) >= SAMPLE_SIZE:
+                break
+    except Exception as e:
+        print(f"Error reading messages from {username}: {e}")
+        # Still try to leave if we joined
+        if LEAVE_AFTER_CLASSIFICATION and joined_by_us:
+            await leave_channel(client, entity)
+        return None
 
     if not texts:
         print("No textual messages for", username)
+        # Still try to leave if we joined
+        if LEAVE_AFTER_CLASSIFICATION and joined_by_us:
+            await leave_channel(client, entity)
         return None
 
     print(f"Classifying {len(texts)} messages from {username} ...")
@@ -209,6 +240,10 @@ async def evaluate_channel(client, conn, username, title=None):
         print("Stored suspicious channel:", username, "score", avg_p)
     else:
         print("Channel appears clean:", username, "avg_prob", avg_p)
+
+    # Leave the channel after classification if we joined it
+    if LEAVE_AFTER_CLASSIFICATION and joined_by_us:
+        await leave_channel(client, entity)
 
     return {"username": username, "avg_prob": avg_p, "pct90": pct90, "suspicious": suspicious}
 
