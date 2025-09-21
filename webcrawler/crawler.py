@@ -7,9 +7,9 @@ Crawler that:
 - stores pages classified as spam (above threshold) into SQLite DB fraud.db
 
 Usage:
-    python crawler.py --base baseurl.txt --db fraud.db --threshold 0.6
+    python crawler.py
 """
-import argparse
+import os
 import time
 import requests
 from bs4 import BeautifulSoup
@@ -18,9 +18,25 @@ import urllib.robotparser
 import sqlite3
 from datetime import datetime
 from tqdm import tqdm
+from dotenv import load_dotenv
 
-USER_AGENT = "GoaCyberCrawler/1.0 (+https://example.com/contact)"
+load_dotenv()  # load .env file
 
+# --------------------------
+# Config from .env
+# --------------------------
+USER_AGENT = os.getenv("USER_AGENT", "GoaCyberCrawler/1.0 (+https://example.com/contact)")
+MODEL_SERVER = os.getenv("MODEL_SERVER_URL", "http://127.0.0.1:8100")
+BASEFILE = os.getenv("BASEURL_FILE", "baseurl.txt")
+DBFILE = os.getenv("DB_FILE", "fraud.db")
+THRESHOLD = float(os.getenv("CRAWLER_THRESHOLD", "0.6"))
+DELAY = float(os.getenv("CRAWLER_DELAY", "2.0"))
+MAX_TEXT_LENGTH = int(os.getenv("MAX_TEXT_LENGTH", "20000"))
+MAX_SNIPPET = int(os.getenv("MAX_SNIPPET_LENGTH", "2000"))
+
+# --------------------------
+# Helper functions
+# --------------------------
 def can_fetch(url, user_agent=USER_AGENT):
     parsed = urlparse(url)
     robots_url = urljoin(f"{parsed.scheme}://{parsed.netloc}", "/robots.txt")
@@ -30,17 +46,13 @@ def can_fetch(url, user_agent=USER_AGENT):
         rp.read()
         return rp.can_fetch(user_agent, url)
     except Exception:
-        # On error, be conservative and allow (or you could disallow). We'll allow but with a delay.
-        return True
+        return True  # allow by default on error
 
 def extract_visible_text(html):
     soup = BeautifulSoup(html, "lxml")
-    # remove scripts/styles
     for s in soup(['script','style','noscript','header','footer','nav','svg','form','iframe']):
         s.decompose()
-    text = soup.get_text(separator="\n")
-    # Collapse whitespace and heuristics
-    lines = [line.strip() for line in text.splitlines()]
+    lines = [line.strip() for line in soup.get_text(separator="\n").splitlines()]
     lines = [ln for ln in lines if ln]
     return "\n".join(lines)
 
@@ -58,11 +70,13 @@ def ensure_db(conn):
     """)
     conn.commit()
 
-def save_suspicious(conn, url, label, score, text, max_snippet=2000):
+def save_suspicious(conn, url, label, score, text, max_snippet=MAX_SNIPPET):
     cur = conn.cursor()
     snippet = text[:max_snippet]
-    cur.execute("INSERT INTO suspicious_pages (url,label,score,text_snippet,scraped_at) VALUES (?,?,?,?,?)",
-                (url, label, float(score), snippet, datetime.utcnow().isoformat() + "Z"))
+    cur.execute(
+        "INSERT INTO suspicious_pages (url,label,score,text_snippet,scraped_at) VALUES (?,?,?,?,?)",
+        (url, label, float(score), snippet, datetime.utcnow().isoformat() + "Z")
+    )
     conn.commit()
 
 def predict_text(model_server, text, url=None, timeout=10):
@@ -78,17 +92,14 @@ def predict_text(model_server, text, url=None, timeout=10):
     except Exception as e:
         return {"error": str(e)}
 
-def main(args):
-    basefile = args.base
-    dbfile = args.db
-    threshold = float(args.threshold)
-    delay = float(args.delay)
-    model_server = args.model_server
-
-    with open(basefile, 'r', encoding='utf-8') as f:
+# --------------------------
+# Main crawler logic
+# --------------------------
+def main():
+    with open(BASEFILE, 'r', encoding='utf-8') as f:
         urls = [line.strip() for line in f if line.strip()]
 
-    conn = sqlite3.connect(dbfile)
+    conn = sqlite3.connect(DBFILE)
     ensure_db(conn)
 
     session = requests.Session()
@@ -107,29 +118,22 @@ def main(args):
             if not text.strip():
                 print(f"No text extracted from {url}")
                 continue
-            # Optionally truncate long pages (to limit payload)
-            payload_text = text[:20000]
-            res = predict_text(model_server, payload_text, url=url)
+            payload_text = text[:MAX_TEXT_LENGTH]
+            res = predict_text(MODEL_SERVER, payload_text, url=url)
             if res.get("error"):
                 print("Model server error for", url, res.get("error"))
                 continue
             label = res.get("label")
             score = float(res.get("score", 0.0))
             print(f"URL={url} label={label} score={score:.3f}")
-            if label == "spam" or score >= threshold:
+            if label == "spam" or score >= THRESHOLD:
                 save_suspicious(conn, url, label, score, text)
                 print("Saved suspicious page:", url)
         except Exception as e:
             print("Error with", url, e)
-        time.sleep(delay)  # polite crawling
+        time.sleep(DELAY)  # polite crawling
+
     conn.close()
 
 if __name__ == "__main__":
-    p = argparse.ArgumentParser()
-    p.add_argument('--base', default='baseurl.txt', help='file with base URLs, one per line')
-    p.add_argument('--db', default='fraud.db', help='sqlite db file to store suspicious pages')
-    p.add_argument('--threshold', default=0.6, help='probability threshold to mark as suspicious')
-    p.add_argument('--delay', default=2.0, help='delay between requests (seconds)')
-    p.add_argument('--model-server', default='http://127.0.0.1:8100', help='model server URL (must include /predict endpoint)')
-    args = p.parse_args()
-    main(args)
+    main()
