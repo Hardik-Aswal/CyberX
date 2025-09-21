@@ -1,1 +1,39 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# Environment variables
 .env
+*.env
+
+# SQLite database files
+*.db
+
+# Logs
+*.log
+
+# PyCharm / VSCode settings
+.idea/
+.vscode/
+
+# macOS system files
+.DS_Store
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# pip cache
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
