@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goa Police - Cyber Patrolling Dashboard</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="goa-emblem">
+                <img src="/static/images/goa-police-logo.png" alt="Goa Police" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="emblem-text" style="display: none;">GP</div>
+            </div>
+            <h1>Goa Police Cyber Patrolling</h1>
+            <p>Advanced Threat Detection & Monitoring System</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Login Section -->
+            <div id="login-section" class="login-container">
+                <div class="login-header">
+                    <h2>Officer Login</h2>
+                    <p>Please authenticate to access the cyber patrolling dashboard</p>
+                </div>
+                <form class="login-form" id="loginForm">
+                    <div class="form-group">
+                        <label for="username">Badge ID / Username</label>
+                        <input type="text" id="username" name="username" required 
+                               placeholder="Enter your badge ID or username" autocomplete="username">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required 
+                               placeholder="Enter your password" autocomplete="current-password">
+                    </div>
+                    <div class="form-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="rememberMe">
+                            <span class="checkmark"></span>
+                            Remember me
+                        </label>
+                    </div>
+                    <button type="submit" class="login-btn" id="loginBtn">
+                        <span class="btn-text">Login to Dashboard</span>
+                        <div class="btn-loader" style="display: none;"></div>
+                    </button>
+                </form>
+                <div class="demo-credentials">
+                    <h4>Demo Credentials:</h4>
+                    <p><strong>officer1</strong> / goa123</p>
+                    <p><strong>admin</strong> / admin789</p>
+                </div>
+            </div>
+
+            <!-- Dashboard Section -->
+            <div id="dashboard-section" class="dashboard" style="display: none;">
+                <div class="dashboard-header">
+                    <div class="user-info">
+                        <h2 class="welcome-msg">Welcome, <span id="officerName">Officer</span></h2>
+                        <p class="user-role"><span id="officerRole">Role</span> • Badge: <span id="officerBadge">000</span></p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="refresh-btn" onclick="refreshDashboard()" title="Refresh Data">
+                            <span class="icon">🔄</span>
+                        </button>
+                        <button class="logout-btn" onclick="logout()">Logout</button>
+                    </div>
+                </div>
+
+                <div class="dashboard-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon telegram">📱</div>
+                        <div class="stat-info">
+                            <div class="stat-number" id="dashTelegramCount">-</div>
+                            <div class="stat-label">Flagged Channels</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon webpage">🌐</div>
+                        <div class="stat-info">
+                            <div class="stat-number" id="dashWebpageCount">-</div>
+                            <div class="stat-label">Suspicious Pages</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon high-risk">⚠️</div>
+                        <div class="stat-info">
+                            <div class="stat-number" id="dashHighRiskCount">-</div>
+                            <div class="stat-label">High Risk Items</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon today">📅</div>
+                        <div class="stat-info">
+                            <div class="stat-number" id="dashTodayCount">-</div>
+                            <div class="stat-label">Found Today</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-cards">
+                    <div class="card telegram-card" onclick="viewTelegramChannels()">
+                        <div class="card-header">
+                            <div class="card-icon telegram">📱</div>
+                            <div class="card-badge" id="telegramBadge">0</div>
+                        </div>
+                        <h3>Telegram Channels</h3>
+                        <p>Monitor and analyze flagged Telegram channels detected by our AI system for suspicious activities including scams, frauds, and illegal services.</p>
+                        <button class="card-btn">View Channels</button>
+                    </div>
+
+                    <div class="card web-card" onclick="viewWebpages()">
+                        <div class="card-header">
+                            <div class="card-icon webpage">🌐</div>
+                            <div class="card-badge" id="webpageBadge">0</div>
+                        </div>
+                        <h3>Suspicious Webpages</h3>
+                        <p>Review flagged websites and web pages that may be involved in cyber scams, phishing attacks, or other fraudulent online activities.</p>
+                        <button class="card-btn">View Webpages</button>
+                    </div>
+                </div>
+
+                <div class="recent-activity">
+                    <h3>Recent Activity</h3>
+                    <div class="activity-list" id="recentActivity">
+                        <div class="activity-item loading">Loading recent activity...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Telegram Channels View -->
+            <div id="telegram-view" class="data-view" style="display: none;">
+                <div class="data-header">
+                    <div class="header-left">
+                        <button class="back-btn" onclick="showDashboard()">← Back</button>
+                        <div class="page-title">
+                            <h2>Flagged Telegram Channels</h2>
+                            <p>AI-detected suspicious channels</p>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <select id="telegramRiskFilter" onchange="filterTelegramChannels()">
+                            <option value="">All Risk Levels</option>
+                            <option value="HIGH">High Risk</option>
+                            <option value="MEDIUM">Medium Risk</option>
+                            <option value="LOW">Low Risk</option>
+                        </select>
+                        <button class="refresh-btn" onclick="loadTelegramData()" title="Refresh">🔄</button>
+                    </div>
+                </div>
+
+                <div class="stats-bar">
+                    <div class="stat-card">
+                        <div class="stat-number" id="telegramTotal">0</div>
+                        <div class="stat-label">Total Flagged</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number high-risk" id="telegramHigh">0</div>
+                        <div class="stat-label">High Risk</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number medium-risk" id="telegramMedium">0</div>
+                        <div class="stat-label">Medium Risk</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="telegramToday">0</div>
+                        <div class="stat-label">Found Today</div>
+                    </div>
+                </div>
+
+                <div class="data-table">
+                    <div class="table-header">
+                        <h3>Suspicious Telegram Channels</h3>
+                        <div class="table-info">
+                            <span id="telegramResultsInfo">Loading...</span>
+                        </div>
+                    </div>
+                    <div class="table-content" id="telegramData">
+                        <div class="loading-container">
+                            <div class="loading-spinner"></div>
+                            <p>Loading channel data...</p>
+                        </div>
+                    </div>
+                    <div class="pagination" id="telegramPagination" style="display: none;">
+                        <button class="page-btn" id="telegramPrevBtn" onclick="loadTelegramData('prev')">Previous</button>
+                        <span class="page-info" id="telegramPageInfo">Page 1</span>
+                        <button class="page-btn" id="telegramNextBtn" onclick="loadTelegramData('next')">Next</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Webpages View -->
+            <div id="webpage-view" class="data-view" style="display: none;">
+                <div class="data-header">
+                    <div class="header-left">
+                        <button class="back-btn" onclick="showDashboard()">← Back</button>
+                        <div class="page-title">
+                            <h2>Flagged Webpages</h2>
+                            <p>AI-detected suspicious websites</p>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <select id="webpageRiskFilter" onchange="filterWebpages()">
+                            <option value="">All Risk Levels</option>
+                            <option value="HIGH">High Risk</option>
+                            <option value="MEDIUM">Medium Risk</option>
+                            <option value="LOW">Low Risk</option>
+                        </select>
+                        <button class="refresh-btn" onclick="loadWebpageData()" title="Refresh">🔄</button>
+                    </div>
+                </div>
+
+                <div class="stats-bar">
+                    <div class="stat-card">
+                        <div class="stat-number" id="webpageTotal">0</div>
+                        <div class="stat-label">Total Flagged</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number high-risk" id="webpageHigh">0</div>
+                        <div class="stat-label">High Risk</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number medium-risk" id="webpageMedium">0</div>
+                        <div class="stat-label">Medium Risk</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="webpageToday">0</div>
+                        <div class="stat-label">Found Today</div>
+                    </div>
+                </div>
+
+                <div class="data-table">
+                    <div class="table-header">
+                        <h3>Suspicious Webpages</h3>
+                        <div class="table-info">
+                            <span id="webpageResultsInfo">Loading...</span>
+                        </div>
+                    </div>
+                    <div class="table-content" id="webpageData">
+                        <div class="loading-container">
+                            <div class="loading-spinner"></div>
+                            <p>Loading webpage data...</p>
+                        </div>
+                    </div>
+                    <div class="pagination" id="webpagePagination" style="display: none;">
+                        <button class="page-btn" id="webpagePrevBtn" onclick="loadWebpageData('prev')">Previous</button>
+                        <span class="page-info" id="webpagePageInfo">Page 1</span>
+                        <button class="page-btn" id="webpageNextBtn" onclick="loadWebpageData('next')">Next</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-content">
+            <div class="loading-spinner large"></div>
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

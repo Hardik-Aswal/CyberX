@@ -15,3 +15,8 @@ python-multipart
 tqdm
 joblib
 urllib3
+# Existing dependencies...
+jinja2>=3.1.2
+aiofiles>=23.2.0
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
