@@ -1,0 +1,3 @@
+https://example.com/some-local-news
+https://example.com/user-submitted-offers
+https://example.com/community/events

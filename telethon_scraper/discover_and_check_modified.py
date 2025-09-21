@@ -138,21 +138,15 @@ def classify_text_batch(texts):
         payload = {"text": t}
         try:
             r = requests.post(CLASSIFIER_API, json=payload, timeout=10)
-            if r.status_code == 200:
-                j = r.json()
-                # support both keys
-                p = j.get("prob_fraud") if isinstance(j.get("prob_fraud"), (int,float)) else (j.get("prob", {}).get("fraud") if j.get("prob") else None)
-                if p is None:
-                    # try alternate key
-                    p = float(j.get("probability", 0.0)) if j.get("probability") else 0.0
-                probs.append(float(p))
-            else:
-                print("Classifier API returned", r.status_code, r.text)
-                probs.append(0.0)
+            r.raise_for_status()
+            j = r.json()
+            # Use the 'score' field from your FastAPI model
+            p = float(j.get("score", 0.0))
+            probs.append(p)
         except Exception as e:
             print("Classifier request failed:", e)
             probs.append(0.0)
-        time.sleep(0.1)  # tiny pause to avoid spamming local API
+        time.sleep(0.1)
     return probs
 
 # ---------- main pipeline ----------

@@ -1,19 +1,22 @@
-# api/app.py
 from fastapi import FastAPI
-from pydantic import BaseModel
-import joblib
+from routers.chat_router import router as chat_router
+from routers.text_router import router as text_router
+from dotenv import load_dotenv
+import os
+import uvicorn
 
-app = FastAPI(title="Fraud Telegram Classifier")
+load_dotenv()
+PORT = int(os.environ.get("MODEL_PORT", 8100))
 
-# Load trained model
-model = joblib.load("/home/gawd/fraud-telegram-classifier/models/baseline_tfidf_lr.joblib")
+app = FastAPI(title="Goa Cyber Scam Cyber Patrolling")
 
-class Msg(BaseModel):
-    text: str
+# Include both routers
+app.include_router(chat_router, prefix="/chat")
+app.include_router(text_router, prefix="/text")
 
-@app.post("/predict")
-def predict(msg: Msg):
-    text = [msg.text]
-    pred = model.predict(text)[0]           # 0 = normal, 1 = fraud
-    prob = model.predict_proba(text)[0][1]  # probability of fraud
-    return {"label_pred": int(pred), "prob_fraud": float(prob)}
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+if __name__ == "__main__":
+    uvicorn.run("app:app", host="0.0.0.0", port=PORT, workers=1)
