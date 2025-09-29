@@ -141,3 +141,7 @@ goa-cyber-patrol/
 ### 6. **Development vs Production**
 - Development: Serve static files via FastAPI
 - Production: Use Nginx to serve static files, FastAPI for API only
+
+### 7 Commands
+python baseline_train.py   --input /home/gawd/CyberX-Goa-Police-Cyber-Cell/data/sample_labeled.jsonl   --out /home/gawd/CyberX-Goa-Police-Cyber-Cell/models/baselin
+e_tfidf_lr.joblib

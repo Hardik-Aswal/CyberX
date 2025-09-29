@@ -11,7 +11,7 @@ pandas
 requests
 beautifulsoup4
 lxml
-python-multipart
+python-multipart==0.0.6
 tqdm
 joblib
 urllib3
