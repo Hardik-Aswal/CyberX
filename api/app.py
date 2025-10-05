@@ -43,7 +43,7 @@ def health():
 # Serve the main frontend application
 @app.get("/")
 async def read_index():
-    return FileResponse('frontend/templates/index.html')
+    return FileResponse('../frontend/templates/index.html')
 
 # Catch-all route for SPA routing
 @app.get("/{full_path:path}")
@@ -53,7 +53,7 @@ async def catch_all(full_path: str):
         raise HTTPException(status_code=404, detail="Not found")
     
     # For all other routes, serve the main app
-    return FileResponse('frontend/templates/index.html')
+    return FileResponse('../frontend/templates/index.html')
 
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=PORT, workers=1, reload=True)
